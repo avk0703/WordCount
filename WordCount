@@ -1,0 +1,116 @@
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.Reader;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+
+public class WordCount1 {
+	//Declaring Variables
+	static Statement stmt;
+	String host,username,password;
+	String line;
+	String stopWordRead;
+	String[] s1 = null;
+	String[] s2 = null;
+	String[] s4 = null;
+	String[] stopWordArray = null;
+	String sql;
+	java.sql.Connection conn;
+	
+	public static void connection() {
+		try {
+			Class.forName("com.mysql.jdbc.Driver");
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * connectionToMySQL:Connecting to MySQL and reading stopwords and compaing it with input file.
+	 */
+	public void connectionToMySQL() {
+		connection();
+		host = "jdbc:mysql://localhost/wordcount";
+		username = "root";
+		password = "impetus";
+		Reader f0,f2;
+		BufferedReader stopWordsReader,inputFile;
+		try {
+			conn = DriverManager.getConnection(host,username, password);
+			stmt = conn.createStatement();
+			
+			f0 = new FileReader("/home/impadmin/Documents/stopwords");
+			stopWordsReader = new BufferedReader(f0);
+			f2 = new FileReader("/home/impadmin/Documents/trial");
+			 inputFile = new BufferedReader(f2);
+
+			Set<String> stopWords = new LinkedHashSet<String>();
+				
+		
+				while ((stopWordRead = stopWordsReader.readLine()) != null) {
+					s1 = stopWordRead.split("\\s+");
+					stopWords.add(stopWordRead);
+				}
+				
+				while ((line = inputFile.readLine()) != null) {
+					s2 = line.split("\\s+");
+					for (int i = 0; i < s2.length; i++) {
+						if(stopWords.contains(s2[i])){
+							System.out.println(s2[i]+":)");
+							continue;
+						}
+						else{
+							System.out.println(s2[i]+"**");
+							addWord(s2[i]);
+						}
+					}
+				}
+				f0.close();
+				stopWordsReader.close();
+				f2.close();
+				inputFile.close();
+				conn.close();
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * addWord:adding non stopwords to database.
+	 */
+	public void addWord(String word) {
+		word = word.toLowerCase().trim();
+		
+		String checkExistence = "select word from WordCount where word='"+ word + "';";
+		ResultSet rs3;
+		try {
+				rs3 = stmt.executeQuery(checkExistence);
+				if (!rs3.next()) {
+				String sql = "insert into WordCount(word) values('"+ word + "');";
+				stmt.executeUpdate(sql);
+				}
+
+				String retrieveCount = "select count from WordCount where word='"+ word + "';";
+				ResultSet rs1 = stmt.executeQuery(retrieveCount);
+				rs1.next();
+				int count = rs1.getInt("count");
+				count++;
+				String updateCount = "Update WordCount set count=" + count+ " where word='" + word+ "';";
+				 stmt.executeUpdate(updateCount);
+				 
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+	}
+	public static void main(String args[]) {
+		WordCount1 con = new WordCount1();
+		con.connectionToMySQL();
+	}
+}
